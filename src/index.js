@@ -91,6 +91,7 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
 app.get("/test", (req, res) => {
   res.json({ hello: "world" });
 });
-http.listen(3000, function() {
-  console.log("listening on *:3000");
+http.listen(process.env.PORT || 3000, function() {
+  console.log("MESSENGER_NODE_URL=" + process.env.MESSENGER_NODE_URL);
+  console.log("listening on *:" + process.env.PORT);
 });

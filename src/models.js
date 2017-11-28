@@ -6,8 +6,14 @@ const DB_HOST = "localhost";
 const DB_PORT = 5432;
 const DB_NAME = "success_mysalonusa_dev";
 
+let DATABASE_URL = process.env.MESSENGER_NODE_URL;
+/*
+if (DATABASE_URL) {
+  DATABASE_URL += "?sslmode=require";
+}*/
+
 const sequelize = new Sequelize(
-  process.env.DATABASE_URL ||
+  DATABASE_URL ||
     `postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
 );
 

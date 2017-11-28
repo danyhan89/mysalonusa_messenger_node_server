@@ -22,11 +22,11 @@
   "homepage":
     "https://github.com/danyhan89/mysalonusa_messenger_node_server#readme",
   "devDependencies": {
-    "cors": "^2.8.4",
-    "nodemon": "^1.12.1",
-    "socket.io": "^2.0.4"
+    "nodemon": "^1.12.1"
   },
   "dependencies": {
+    "cors": "^2.8.4",
+    "socket.io": "^2.0.4",
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
     "express": "^4.15.2",
