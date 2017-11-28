@@ -5,18 +5,22 @@
   "description": "node server for mysalonusa_messenger client",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon index.js"
+    "start": "node index.js",
+    "dev": "nodemon index.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/danyhan89/mysalonusa_messenger_node_server.git"
+    "url":
+      "git+https://github.com/danyhan89/mysalonusa_messenger_node_server.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/danyhan89/mysalonusa_messenger_node_server/issues"
+    "url":
+      "https://github.com/danyhan89/mysalonusa_messenger_node_server/issues"
   },
-  "homepage": "https://github.com/danyhan89/mysalonusa_messenger_node_server#readme",
+  "homepage":
+    "https://github.com/danyhan89/mysalonusa_messenger_node_server#readme",
   "devDependencies": {
     "cors": "^2.8.4",
     "nodemon": "^1.12.1",

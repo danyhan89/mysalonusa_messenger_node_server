@@ -7,7 +7,8 @@ const DB_PORT = 5432;
 const DB_NAME = "success_mysalonusa_dev";
 
 const sequelize = new Sequelize(
-  `postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+  process.env.DATABASE_URL ||
+    `postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
 );
 
 const States = sequelize.define(
@@ -60,9 +61,7 @@ Chats.hasOne(Communities, {
 });
 
 const findStateByAbbreviation = async abbr => {
-  const [
-    foundState
-  ] = await sequelize.query(
+  const [foundState] = await sequelize.query(
     'SELECT "states".* FROM "states" WHERE (lower(abbreviation) =?)',
     { model: States, replacements: [abbr.toLowerCase()] }
   );

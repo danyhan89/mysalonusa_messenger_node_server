@@ -88,6 +88,9 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
   }
 ].forEach(setupStateRoom);
 
+app.get("/test", (req, res) => {
+  res.json({ hello: "world" });
+});
 http.listen(3000, function() {
   console.log("listening on *:3000");
 });
