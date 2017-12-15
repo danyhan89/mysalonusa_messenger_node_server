@@ -1,5 +1,6 @@
 const app = require("express")();
 const http = require("http").Server(app);
+const bodyParser = require("body-parser");
 const io = require("socket.io")(http);
 const Sequelize = require("sequelize");
 const setupRoutes = require("./setupRoutes");
@@ -8,20 +9,27 @@ const {
   Communities,
   States,
   sequelize,
-  findStateByAbbreviation
+  createChatMessage,
+  publishChatMessage,
+  findState
 } = require("./models");
 
 const cors = require("cors");
 
 app.use(cors());
+app.use(bodyParser.json());
 
 setupRoutes(app);
+
+const socketsPerState = require("./socketsPerState");
 
 const setupStateRoom = ({ id: stateId, name: stateName }) => {
   stateId = stateId.toLowerCase();
   const stateio = io.of("/" + stateId);
   stateio.on("connection", async function(socket) {
     console.log("a user connected to " + stateName);
+
+    socketsPerState.set(stateId, socket);
 
     socket.emit(
       "publish",
@@ -30,45 +38,14 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
       })
     );
 
-    const state = await findStateByAbbreviation(stateId);
+    const state = await findState(stateId);
     if (!state) {
       console.error("no state found for ", stateId);
     }
+    socketsPerState.set(state.id, socket);
+
     socket.on("message", async chatMessage => {
-      chatMessage = JSON.parse(chatMessage);
-
-      const { message, nickname } = chatMessage;
-
-      try {
-        const community = await Communities.findOne({
-          where: {
-            name: chatMessage.community.name
-          }
-        });
-
-        let persistedMessage = await Chats.create(
-          {
-            message,
-            nickname,
-            community_id: community.id,
-            state_id: state.id
-          },
-          {
-            include: Communities
-          }
-        );
-
-        persistedMessage = JSON.stringify(persistedMessage);
-        persistedMessage = JSON.parse(persistedMessage);
-        persistedMessage.community = community;
-        persistedMessage.type = "chat";
-        persistedMessage = JSON.stringify(persistedMessage);
-
-        socket.broadcast.emit("publish", persistedMessage);
-        socket.emit("publish", persistedMessage);
-      } catch (err) {
-        console.error(err);
-      }
+      publishChatMessage(JSON.parse(chatMessage));
     });
   });
 };

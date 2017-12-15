@@ -7,7 +7,10 @@ const {
   Chats,
   States,
   Communities,
-  findStateByAbbreviation
+  MessengerJobs,
+  createChatMessage,
+  publishChatMessage,
+  findState
 } = require("./models");
 
 module.exports = app => {
@@ -24,7 +27,7 @@ module.exports = app => {
     const { skip, limit, state, community } = req.query;
 
     try {
-      const foundState = await findStateByAbbreviation(state);
+      const foundState = await findState(state);
       const foundCommunity = await Communities.findOne({
         where: { name: community.toLowerCase() }
       });
@@ -44,6 +47,55 @@ module.exports = app => {
       });
 
       res.json(chats);
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  app.post("/createJob", async function(req, res, next) {
+    const {
+      community,
+      email,
+      description,
+      state,
+      nickname,
+      uniqueNickname
+    } = req.body;
+
+    try {
+      const foundState = await findState(state);
+      const foundCommunity = await Communities.findOne({
+        where: { name: community.toLowerCase() }
+      });
+      if (!foundState || !foundCommunity) {
+        res.json({
+          success: false,
+          message: !foundState
+            ? `No state "${state}" found!`
+            : `No community "${community}" found!`
+        });
+        return;
+      }
+
+      const createdJob = await MessengerJobs.create({
+        nickname,
+        email,
+        description,
+        state_id: foundState.id,
+        community_id: foundCommunity.id
+      });
+
+      publishChatMessage({
+        type: "job",
+        nickname: uniqueNickname,
+        message: JSON.stringify(createdJob),
+        email,
+        description,
+        state: foundState.id,
+        community: foundCommunity.name
+      });
+
+      res.json({ success: true, job: createdJob });
     } catch (err) {
       console.error(err);
     }
