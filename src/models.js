@@ -15,31 +15,26 @@ if (DATABASE_URL) {
 
 const sequelize = new Sequelize(
   DATABASE_URL ||
-    `postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
+  `postgres://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}`
 );
 
 const States = sequelize.define(
-  "states",
-  {
+  "states", {
     name: Sequelize.STRING
-  },
-  {
+  }, {
     underscored: true
   }
 );
 const Communities = sequelize.define(
-  "communities",
-  {
+  "communities", {
     name: Sequelize.STRING
-  },
-  {
+  }, {
     underscored: true
   }
 );
 
 const Chats = sequelize.define(
-  "chats",
-  {
+  "chats", {
     message: Sequelize.STRING,
     nickname: Sequelize.STRING,
     email: Sequelize.STRING,
@@ -61,8 +56,7 @@ const Chats = sequelize.define(
         key: "id"
       }
     }
-  },
-  {
+  }, {
     underscored: true
   }
 );
@@ -72,8 +66,7 @@ Chats.hasOne(Communities, {
 });
 
 const MessengerJobs = sequelize.define(
-  "messenger_jobs",
-  {
+  "messenger_jobs", {
     description: Sequelize.STRING,
     nickname: Sequelize.STRING,
     email: Sequelize.STRING,
@@ -91,8 +84,7 @@ const MessengerJobs = sequelize.define(
         key: "id"
       }
     }
-  },
-  {
+  }, {
     underscored: true
   }
 );
@@ -102,8 +94,10 @@ const findStateByAbbreviation = async abbr => {
     return null;
   }
   const [foundState] = await sequelize.query(
-    'SELECT "states".* FROM "states" WHERE (lower(abbreviation) =?)',
-    { model: States, replacements: [abbr.toLowerCase()] }
+    'SELECT "states".* FROM "states" WHERE (lower(abbreviation) =?)', {
+      model: States,
+      replacements: [abbr.toLowerCase()]
+    }
   );
 
   return foundState;
@@ -128,19 +122,24 @@ const findStateById = async id => {
 };
 
 const publishChatMessage = async chatMessage => {
-  const { message, nickname, state: stateId, community, type } = chatMessage;
+  const {
+    message,
+    nickname,
+    state: stateId,
+    community,
+    type
+  } = chatMessage;
 
   try {
-    let persistedMessage = await createChatMessage(
-      {
-        message,
-        nickname,
-        type,
-        state: stateId,
-        community
-      },
-      { includeCommunity: false }
-    );
+    let persistedMessage = await createChatMessage({
+      message,
+      nickname,
+      type,
+      state: stateId,
+      community
+    }, {
+        includeCommunity: false
+      });
 
     const foundCommunity = await Communities.findOne({
       where: {
@@ -162,8 +161,16 @@ const publishChatMessage = async chatMessage => {
   }
 };
 
-const createChatMessage = async (chatMessage, { includeCommunity } = {}) => {
-  const { message, nickname, community, state, type } = chatMessage;
+const createChatMessage = async (chatMessage, {
+  includeCommunity
+} = {}) => {
+  const {
+    message,
+    nickname,
+    community,
+    state,
+    type
+  } = chatMessage;
 
   try {
     const foundCommunity = await Communities.findOne({
@@ -173,19 +180,15 @@ const createChatMessage = async (chatMessage, { includeCommunity } = {}) => {
     });
     const foundState = await findState(state);
 
-    const createdMessage = await Chats.create(
-      {
-        message,
-        nickname,
-        // TODO
-        chatType: type == "job" ? 1 : 0, //type || "chat",
-        community_id: foundCommunity.id,
-        state_id: foundState.id
-      },
-      {
+    const createdMessage = await Chats.create({
+      message,
+      nickname,
+      chat_type: type == "job" ? 1 : 0, //type || "chat",
+      community_id: foundCommunity.id,
+      state_id: foundState.id
+    }, {
         include: Communities
-      }
-    );
+      });
 
     if (includeCommunity) {
       createMessage.community = foundCommunity;
