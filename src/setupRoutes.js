@@ -23,7 +23,7 @@ module.exports = app => {
   app.use(cookieParser());
 
   /* GET home page. */
-  app.get("/fetchChats", async function(req, res, next) {
+  app.get("/fetchChats", async function (req, res, next) {
     const { skip, limit, state, community } = req.query;
 
     try {
@@ -52,7 +52,7 @@ module.exports = app => {
     }
   });
 
-  app.post("/createJob", async function(req, res, next) {
+  app.post("/createJob", async function (req, res, next) {
     const {
       community,
       email,
@@ -100,4 +100,22 @@ module.exports = app => {
       console.error(err);
     }
   });
+
+
+  app.post("/applyForJob", async function (req, res, next) {
+    const {
+    community,
+      email,
+      description,
+      state,
+      nickname,
+      uniqueNickname
+  } = req.body;
+
+    res.json({
+      success: true
+    })
+  })
+
 };
+

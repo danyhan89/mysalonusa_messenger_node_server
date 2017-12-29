@@ -11,21 +11,19 @@
   },
   "repository": {
     "type": "git",
-    "url":
-      "git+https://github.com/danyhan89/mysalonusa_messenger_node_server.git"
+    "url": "git+https://github.com/danyhan89/mysalonusa_messenger_node_server.git"
   },
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url":
-      "https://github.com/danyhan89/mysalonusa_messenger_node_server/issues"
+    "url": "https://github.com/danyhan89/mysalonusa_messenger_node_server/issues"
   },
-  "homepage":
-    "https://github.com/danyhan89/mysalonusa_messenger_node_server#readme",
+  "homepage": "https://github.com/danyhan89/mysalonusa_messenger_node_server#readme",
   "devDependencies": {
     "nodemon": "^1.12.1"
   },
   "dependencies": {
+    "@sendgrid/mail": "^6.1.4",
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
     "cors": "^2.8.4",

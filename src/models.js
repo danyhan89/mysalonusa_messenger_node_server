@@ -37,6 +37,7 @@ const Chats = sequelize.define(
   "chats", {
     message: Sequelize.STRING,
     nickname: Sequelize.STRING,
+    alias: Sequelize.STRING,
     email: Sequelize.STRING,
     chat_type: {
       type: Sequelize.ENUM,
@@ -69,6 +70,7 @@ const MessengerJobs = sequelize.define(
   "messenger_jobs", {
     description: Sequelize.STRING,
     nickname: Sequelize.STRING,
+    alias: Sequelize.STRING,
     email: Sequelize.STRING,
     state_id: {
       type: Sequelize.INTEGER,
@@ -125,6 +127,7 @@ const publishChatMessage = async chatMessage => {
   const {
     message,
     nickname,
+    alias,
     state: stateId,
     community,
     type
@@ -134,6 +137,7 @@ const publishChatMessage = async chatMessage => {
     let persistedMessage = await createChatMessage({
       message,
       nickname,
+      alias,
       type,
       state: stateId,
       community
@@ -167,6 +171,7 @@ const createChatMessage = async (chatMessage, {
   const {
     message,
     nickname,
+    alias,
     community,
     state,
     type
@@ -183,6 +188,7 @@ const createChatMessage = async (chatMessage, {
     const createdMessage = await Chats.create({
       message,
       nickname,
+      alias,
       chat_type: type == "job" ? 1 : 0, //type || "chat",
       community_id: foundCommunity.id,
       state_id: foundState.id
