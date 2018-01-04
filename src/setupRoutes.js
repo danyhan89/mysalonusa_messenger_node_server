@@ -24,7 +24,7 @@ module.exports = app => {
 
   /* GET home page. */
   app.get("/fetchChats", async function (req, res, next) {
-    const { skip, limit, state, community } = req.query;
+    const { beforeId, limit, state, community } = req.query;
 
     try {
       const foundState = await findState(state);
@@ -36,14 +36,21 @@ module.exports = app => {
         return;
       }
 
+      const where = {
+        state_id: foundState.id,
+        community_id: foundCommunity.id
+      }
+
+      if (beforeId) {
+        where.id = {
+          $lt: beforeId
+        }
+      }
+
       const chats = await Chats.findAll({
-        offset: skip,
         limit,
-        where: {
-          state_id: foundState.id,
-          community_id: foundCommunity.id
-        },
-        order: [["created_at", "DESC"]]
+        where,
+        order: [["id", "DESC"]]
       });
 
       res.json(chats);
