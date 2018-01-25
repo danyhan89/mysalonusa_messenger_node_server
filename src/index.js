@@ -26,17 +26,10 @@ const socketsPerState = require("./socketsPerState");
 const setupStateRoom = ({ id: stateId, name: stateName }) => {
   stateId = stateId.toLowerCase();
   const stateio = io.of("/" + stateId);
-  stateio.on("connection", async function(socket) {
+  stateio.on("connection", async function (socket) {
     console.log("a user connected to " + stateName);
 
     socketsPerState.set(stateId, socket);
-
-    socket.emit(
-      "publish",
-      JSON.stringify({
-        olderMessages: []
-      })
-    );
 
     const state = await findState(stateId);
     if (!state) {
@@ -68,7 +61,7 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
 app.get("/test", (req, res) => {
   res.json({ hello: "world" });
 });
-http.listen(process.env.PORT || 3000, function() {
+http.listen(process.env.PORT || 3000, function () {
   console.log("MESSENGER_NODE_URL=" + process.env.MESSENGER_NODE_URL);
   console.log("listening on *:" + process.env.PORT);
 });
