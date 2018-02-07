@@ -31,6 +31,7 @@ module.exports = app => {
       const foundCommunity = await Communities.findOne({
         where: { name: community.toLowerCase() }
       });
+
       if (!foundState || !foundCommunity) {
         res.json([]);
         return;

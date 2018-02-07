@@ -11,6 +11,8 @@ const {
   sequelize,
   createChatMessage,
   publishChatMessage,
+  deleteChatMessage,
+  editChatMessage,
   findState
 } = require("./models");
 
@@ -39,6 +41,13 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
 
     socket.on("message", async chatMessage => {
       publishChatMessage(JSON.parse(chatMessage));
+    });
+
+    socket.on("editMessage", async chatMessage => {
+      editChatMessage(JSON.parse(chatMessage));
+    });
+    socket.on("deleteMessage", async messageId => {
+      deleteChatMessage(JSON.parse(messageId));
     });
   });
 };

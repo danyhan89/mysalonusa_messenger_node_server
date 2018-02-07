@@ -165,6 +165,68 @@ const publishChatMessage = async chatMessage => {
   }
 };
 
+const editChatMessage = async chatMessage => {
+  const {
+    message,
+    nickname,
+    alias,
+    state_id: stateId,
+    community_id: communityId,
+    type
+  } = chatMessage;
+
+  try {
+    await Chats.update({
+      message,
+      nickname,
+      alias,
+    }, {
+        where: {
+          id: chatMessage.id
+        }
+      });
+
+    persistedMessage = await Chats.findById(chatMessage.id)
+
+    const foundCommunity = await Communities.findOne({
+      where: {
+        id: communityId
+      }
+    });
+
+    persistedMessage = JSON.stringify(persistedMessage);
+    persistedMessage = JSON.parse(persistedMessage);
+    persistedMessage.community = foundCommunity;
+    persistedMessage = JSON.stringify(persistedMessage);
+
+    const socket = socketsPerState.get(stateId);
+
+    socket.broadcast.emit("edit", persistedMessage);
+    socket.emit("edit", persistedMessage);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
+const deleteChatMessage = async id => {
+
+  try {
+
+    const chatMessage = await Chats.findById(id)
+
+    await chatMessage.destroy()
+
+    const socket = socketsPerState.get(chatMessage.state_id);
+
+    socket.broadcast.emit("delete", id);
+    socket.emit("delete", id);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
 const createChatMessage = async (chatMessage, {
   includeCommunity
 } = {}) => {
@@ -213,5 +275,7 @@ module.exports = {
   findState,
   createChatMessage,
   publishChatMessage,
+  editChatMessage,
+  deleteChatMessage,
   sequelize
 };
