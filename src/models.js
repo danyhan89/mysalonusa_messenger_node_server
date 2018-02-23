@@ -72,6 +72,7 @@ const MessengerJobs = sequelize.define(
     nickname: Sequelize.STRING,
     alias: Sequelize.STRING,
     email: Sequelize.STRING,
+    created_at: Sequelize.DATE,
     state_id: {
       type: Sequelize.INTEGER,
       references: {

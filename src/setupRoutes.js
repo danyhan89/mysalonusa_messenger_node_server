@@ -60,6 +60,46 @@ module.exports = app => {
     }
   });
 
+  app.get("/fetchJobs", async function (req, res, next) {
+    const { skip, limit, state, community } = req.query;
+
+    try {
+      const foundState = await findState(state);
+      const foundCommunity = await Communities.findOne({
+        where: { name: community.toLowerCase() }
+      });
+
+      if (!foundState || !foundCommunity) {
+        res.json([]);
+        return;
+      }
+
+      const where = {
+        state_id: foundState.id,
+        community_id: foundCommunity.id
+      }
+
+      const query = {
+        limit,
+        offset: skip,
+        where,
+        order: [["created_at", "DESC"]]
+      }
+      const countQuery = Object.assign({}, query)
+      delete countQuery.limit;
+      delete countQuery.offset;
+
+      const count = await MessengerJobs.count(countQuery);
+
+      const jobs = await MessengerJobs.findAll(query);
+
+      res.header('X-Total-Count', count);
+      res.json(jobs);
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
   app.post("/createJob", async function (req, res, next) {
     const {
       community,
@@ -112,13 +152,13 @@ module.exports = app => {
 
   app.post("/applyForJob", async function (req, res, next) {
     const {
-    community,
+      community,
       email,
       description,
       state,
       nickname,
       uniqueNickname
-  } = req.body;
+    } = req.body;
 
     res.json({
       success: true

@@ -18,7 +18,11 @@ const {
 
 const cors = require("cors");
 
-app.use(cors());
+app.use(cors({
+  exposedHeaders: [
+    'Content-Type', 'X-Total-Count'
+  ]
+}));
 app.use(bodyParser.json());
 
 setupRoutes(app);
