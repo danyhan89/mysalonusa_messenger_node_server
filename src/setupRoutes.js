@@ -69,14 +69,17 @@ module.exports = app => {
         where: { name: community.toLowerCase() }
       });
 
-      if (!foundState || !foundCommunity) {
+      if (!foundState) {
         res.json([]);
         return;
       }
 
       const where = {
-        state_id: foundState.id,
-        community_id: foundCommunity.id
+        state_id: foundState.id
+      }
+
+      if (foundCommunity) {
+        where.community_id = foundCommunity.id
       }
 
       const query = {
@@ -95,6 +98,7 @@ module.exports = app => {
 
       res.header('X-Total-Count', count);
       res.json(jobs);
+
     } catch (err) {
       console.error(err);
     }
@@ -148,6 +152,19 @@ module.exports = app => {
       console.error(err);
     }
   });
+
+  app.patch('/incrementJobView', async function (req, res) {
+    const { id } = req.body
+
+    console.log('find job with id ' + id)
+    const job = await MessengerJobs.findById(id);
+
+    const views = (job.views || 0) + 1
+
+    await job.update({ views })
+
+    res.json({ success: true, views });
+  })
 
 
   app.post("/applyForJob", async function (req, res, next) {
