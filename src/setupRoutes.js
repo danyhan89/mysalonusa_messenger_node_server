@@ -2,14 +2,18 @@ var express = require("express");
 var path = require("path");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
+const Sequelize = require("sequelize");
+
 const {
   sequelize,
   Chats,
   States,
   Communities,
+  BusinessOnSales,
   MessengerJobs,
   createChatMessage,
   publishChatMessage,
+  findCityIdsInStateId,
   findState
 } = require("./models");
 
@@ -48,13 +52,33 @@ module.exports = app => {
         }
       }
 
-      const chats = await Chats.findAll({
+      let chats = await Chats.findAll({
         limit,
         where,
         order: [["id", "DESC"]]
       });
 
-      res.json(chats);
+      const promisedChats = chats.map(chat => {
+        return new Promise((resolve) => {
+          chat = chat.toJSON()
+
+          if (chat.chat_type == 1) { //job 
+            let job = JSON.parse(chat.message)
+            MessengerJobs.findById(job.id).then(job => {
+              chat.message = JSON.stringify(job)
+              resolve(chat)
+            })
+          } else {
+            resolve(chat)
+          }
+        })
+      })
+
+      Promise.all(promisedChats).then(chats => {
+        res.json(chats)
+      })
+
+      //res.json(chats);
     } catch (err) {
       console.error(err);
     }
@@ -98,6 +122,48 @@ module.exports = app => {
 
       res.header('X-Total-Count', count);
       res.json(jobs);
+
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  app.get("/fetchBusinessOnSales", async function (req, res, next) {
+    const { skip, limit, state } = req.query;
+
+    try {
+      const foundState = await findState(state);
+
+      if (!foundState) {
+        res.json([]);
+        return;
+      }
+
+      const cityIdsInState = await findCityIdsInStateId(foundState.id)
+
+      const where = {
+        city_id: {
+          'in': cityIdsInState
+        }
+      }
+
+      const query = {
+        limit,
+        offset: skip,
+        where,
+        order: [["created_at", "DESC"]]
+      }
+
+      const countQuery = Object.assign({}, query)
+      delete countQuery.limit;
+      delete countQuery.offset;
+
+      const count = await BusinessOnSales.count(countQuery);
+
+      const results = await BusinessOnSales.findAll(query);
+
+      res.header('X-Total-Count', count);
+      res.json(results);
 
     } catch (err) {
       console.error(err);

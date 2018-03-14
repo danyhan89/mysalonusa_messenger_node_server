@@ -92,6 +92,54 @@ const MessengerJobs = sequelize.define(
     underscored: true
   }
 );
+// create_table "business_on_sales", force: :cascade do |t|
+// t.text     "title"
+// t.text     "description"
+// t.integer  "views",                    default: 0
+// t.text     "contact_email"
+// t.datetime "created_at",                               null: false
+// t.datetime "updated_at",                               null: false
+// t.json     "images"
+// t.string   "price_string"
+// t.string   "image_urls",               default: [],                 array: true
+// t.integer  "city_id"
+// end
+
+
+const Cities = sequelize.define("cities", {
+  name: Sequelize.STRING,
+  created_at: Sequelize.DATE,
+  state_id: {
+    type: Sequelize.INTEGER,
+    references: {
+      model: States,
+      key: "id"
+    }
+  }
+}, { underscored: true })
+
+const BusinessOnSales = sequelize.define(
+  "business_on_sales", {
+    description: Sequelize.STRING,
+    title: Sequelize.STRING,
+    views: Sequelize.INTEGER,
+    contact_email: Sequelize.STRING,
+    image_urls: Sequelize.ARRAY(Sequelize.STRING),
+    price_string: Sequelize.STRING,
+
+    created_at: Sequelize.DATE,
+
+    city_id: {
+      type: Sequelize.INTEGER,
+      references: {
+        model: Cities,
+        key: "id"
+      }
+    }
+  }, {
+    underscored: true
+  }
+);
 
 const findStateByAbbreviation = async abbr => {
   if (typeof abbr != "string") {
@@ -105,6 +153,18 @@ const findStateByAbbreviation = async abbr => {
   );
 
   return foundState;
+};
+
+
+const findCityIdsInStateId = async stateId => {
+  console.log('cities in ' + stateId)
+  const cities = await Cities.findAll({
+    where: {
+      state_id: stateId
+    }
+  })
+
+  return cities.map(c => c.id)
 };
 
 const STATES = new Map();
@@ -272,9 +332,12 @@ const createChatMessage = async (chatMessage, {
 module.exports = {
   States,
   Communities,
+  Cities,
+  BusinessOnSales,
   Chats,
   MessengerJobs,
   findState,
+  findCityIdsInStateId,
   createChatMessage,
   publishChatMessage,
   editChatMessage,
