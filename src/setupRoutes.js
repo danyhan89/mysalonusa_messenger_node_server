@@ -3,11 +3,18 @@ var path = require("path");
 var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 const Sequelize = require("sequelize");
+const multer = require("multer");
+const upload = multer({
+  limits: { fieldSize: 25 * 1024 * 1024 }
+});
+
+const uploadFile = require("./uploadFile");
 
 const {
   sequelize,
   Chats,
   States,
+  Cities,
   Communities,
   BusinessOnSales,
   MessengerJobs,
@@ -23,11 +30,11 @@ module.exports = app => {
   //  app.use(logger("dev"));
   app.set("view engine", false);
   app.use(bodyParser.json());
-  app.use(bodyParser.urlencoded({ extended: false }));
+  app.use(bodyParser.urlencoded({ extended: true }));
   app.use(cookieParser());
 
   /* GET home page. */
-  app.get("/fetchChats", async function (req, res, next) {
+  app.get("/fetchChats", async function(req, res, next) {
     const { beforeId, limit, state, community } = req.query;
 
     try {
@@ -44,12 +51,12 @@ module.exports = app => {
       const where = {
         state_id: foundState.id,
         community_id: foundCommunity.id
-      }
+      };
 
       if (beforeId) {
         where.id = {
           $lt: beforeId
-        }
+        };
       }
 
       let chats = await Chats.findAll({
@@ -59,24 +66,25 @@ module.exports = app => {
       });
 
       const promisedChats = chats.map(chat => {
-        return new Promise((resolve) => {
-          chat = chat.toJSON()
+        return new Promise(resolve => {
+          chat = chat.toJSON();
 
-          if (chat.chat_type == 1) { //job 
-            let job = JSON.parse(chat.message)
+          if (chat.chat_type == 1) {
+            //job
+            let job = JSON.parse(chat.message);
             MessengerJobs.findById(job.id).then(job => {
-              chat.message = JSON.stringify(job)
-              resolve(chat)
-            })
+              chat.message = JSON.stringify(job);
+              resolve(chat);
+            });
           } else {
-            resolve(chat)
+            resolve(chat);
           }
-        })
-      })
+        });
+      });
 
       Promise.all(promisedChats).then(chats => {
-        res.json(chats)
-      })
+        res.json(chats);
+      });
 
       //res.json(chats);
     } catch (err) {
@@ -84,7 +92,24 @@ module.exports = app => {
     }
   });
 
-  app.get("/fetchJobs", async function (req, res, next) {
+  app.get("/fetchCities", async function(req, res) {
+    const { state } = req.query;
+
+    const foundState = await findState(state);
+
+    if (!foundState) {
+      return res.json([]);
+    }
+    const cities = await Cities.findAll({
+      where: {
+        state_id: foundState.id
+      }
+    });
+
+    res.json(cities);
+  });
+
+  app.get("/fetchJobs", async function(req, res, next) {
     const { skip, limit, state, community } = req.query;
 
     try {
@@ -100,10 +125,10 @@ module.exports = app => {
 
       const where = {
         state_id: foundState.id
-      }
+      };
 
       if (foundCommunity) {
-        where.community_id = foundCommunity.id
+        where.community_id = foundCommunity.id;
       }
 
       const query = {
@@ -111,8 +136,8 @@ module.exports = app => {
         offset: skip,
         where,
         order: [["created_at", "DESC"]]
-      }
-      const countQuery = Object.assign({}, query)
+      };
+      const countQuery = Object.assign({}, query);
       delete countQuery.limit;
       delete countQuery.offset;
 
@@ -120,15 +145,14 @@ module.exports = app => {
 
       const jobs = await MessengerJobs.findAll(query);
 
-      res.header('X-Total-Count', count);
+      res.header("X-Total-Count", count);
       res.json(jobs);
-
     } catch (err) {
       console.error(err);
     }
   });
 
-  app.get("/fetchBusinessOnSales", async function (req, res, next) {
+  app.get("/fetchBusinessOnSales", async function(req, res, next) {
     const { skip, limit, state } = req.query;
 
     try {
@@ -139,22 +163,22 @@ module.exports = app => {
         return;
       }
 
-      const cityIdsInState = await findCityIdsInStateId(foundState.id)
+      const cityIdsInState = await findCityIdsInStateId(foundState.id);
 
       const where = {
         city_id: {
-          'in': cityIdsInState
+          in: cityIdsInState
         }
-      }
+      };
 
       const query = {
         limit,
         offset: skip,
         where,
         order: [["created_at", "DESC"]]
-      }
+      };
 
-      const countQuery = Object.assign({}, query)
+      const countQuery = Object.assign({}, query);
       delete countQuery.limit;
       delete countQuery.offset;
 
@@ -162,15 +186,80 @@ module.exports = app => {
 
       const results = await BusinessOnSales.findAll(query);
 
-      res.header('X-Total-Count', count);
+      res.header("X-Total-Count", count);
       res.json(results);
-
     } catch (err) {
       console.error(err);
     }
   });
 
-  app.post("/createJob", async function (req, res, next) {
+  app.post("/createBusiness", upload.array(), async function(req, res, next) {
+    const {
+      community,
+      email,
+      description,
+      title,
+      price,
+      images,
+      fileNames,
+      contentTypes,
+      state,
+      city: city_id,
+      uniqueNickname
+    } = req.body;
+
+    try {
+      const createdBusiness = await BusinessOnSales.create({
+        description,
+        title,
+        views: 0,
+        nickname: uniqueNickname,
+        contact_email: email,
+        price_string: price,
+        city_id,
+        image_urls: []
+      });
+      /*
+      publishChatMessage({
+        type: "job",
+        nickname: uniqueNickname,
+        message: JSON.stringify(createdJob),
+        email,
+        description,
+        state: foundState.id,
+        community: foundCommunity.name
+      });*/
+
+      res.json({ success: true, business: createdBusiness });
+
+      const promises = images.map((image, index) => {
+        const fileName = fileNames[index];
+        const parts = fileName.split(".");
+        const extension = parts[parts.length - 1];
+
+        return uploadFile(image, {
+          contentType: contentTypes[index],
+          key: [
+            "uploads",
+            "business_on_sale",
+            "images",
+            createdBusiness.id,
+            index + 1 + "." + extension
+          ].join("/")
+        });
+      });
+
+      Promise.all(promises).then(urls => {
+        createdBusiness.update({
+          image_urls: urls
+        });
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  app.post("/createJob", async function(req, res, next) {
     const {
       community,
       email,
@@ -219,21 +308,20 @@ module.exports = app => {
     }
   });
 
-  app.patch('/incrementJobView', async function (req, res) {
-    const { id } = req.body
+  app.patch("/incrementJobView", async function(req, res) {
+    const { id } = req.body;
 
-    console.log('find job with id ' + id)
+    console.log("find job with id " + id);
     const job = await MessengerJobs.findById(id);
 
-    const views = (job.views || 0) + 1
+    const views = (job.views || 0) + 1;
 
-    await job.update({ views })
+    await job.update({ views });
 
     res.json({ success: true, views });
-  })
+  });
 
-
-  app.post("/applyForJob", async function (req, res, next) {
+  app.post("/applyForJob", async function(req, res, next) {
     const {
       community,
       email,
@@ -245,8 +333,6 @@ module.exports = app => {
 
     res.json({
       success: true
-    })
-  })
-
+    });
+  });
 };
-

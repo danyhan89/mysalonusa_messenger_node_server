@@ -16,14 +16,15 @@ const {
   findState
 } = require("./models");
 
+require("dotenv").config();
+
 const cors = require("cors");
 
-app.use(cors({
-  exposedHeaders: [
-    'Content-Type', 'X-Total-Count'
-  ]
-}));
-app.use(bodyParser.json());
+app.use(
+  cors({
+    exposedHeaders: ["Content-Type", "X-Total-Count"]
+  })
+);
 
 setupRoutes(app);
 
@@ -32,7 +33,7 @@ const socketsPerState = require("./socketsPerState");
 const setupStateRoom = ({ id: stateId, name: stateName }) => {
   stateId = stateId.toLowerCase();
   const stateio = io.of("/" + stateId);
-  stateio.on("connection", async function (socket) {
+  stateio.on("connection", async function(socket) {
     console.log("a user connected to " + stateName);
 
     socketsPerState.set(stateId, socket);
@@ -74,7 +75,7 @@ const setupStateRoom = ({ id: stateId, name: stateName }) => {
 app.get("/test", (req, res) => {
   res.json({ hello: "world" });
 });
-http.listen(process.env.PORT || 3000, function () {
+http.listen(process.env.PORT || 3000, function() {
   console.log("MESSENGER_NODE_URL=" + process.env.MESSENGER_NODE_URL);
   console.log("listening on *:" + process.env.PORT);
 });
