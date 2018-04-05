@@ -152,6 +152,60 @@ module.exports = app => {
     }
   });
 
+  app.get("/dashboardInfo", async function(req, res) {
+    const aMonthAgo = new Date(new Date() - 30 * 24 * 60 * 60 * 1000);
+
+    const { state } = req.query;
+
+    const foundState = await findState(state);
+
+    const businessOnSalesWhere = {
+      created_at: {
+        [Sequelize.Op.gt]: aMonthAgo
+      }
+    };
+    if (foundState) {
+      const cityIdsInState = await findCityIdsInStateId(foundState.id);
+
+      businessOnSalesWhere.city_id = {
+        in: cityIdsInState
+      };
+    }
+    const businessOnSalesCount = await BusinessOnSales.count({
+      where: businessOnSalesWhere
+    });
+
+    const jobsWhere = {
+      created_at: {
+        [Sequelize.Op.gt]: aMonthAgo
+      }
+    };
+    if (foundState) {
+      jobsWhere.state_id = foundState.id;
+    }
+    const jobsCount = await MessengerJobs.count({
+      where: jobsWhere
+    });
+
+    const chatsWhere = {
+      created_at: {
+        [Sequelize.Op.gt]: aMonthAgo
+      }
+    };
+    if (foundState) {
+      chatsWhere.state_id = foundState.id;
+    }
+    const chatsCount = await Chats.count({
+      where: chatsWhere
+    });
+
+    res.json({
+      businessOnSalesCount,
+      jobsCount,
+      chatsCount
+    });
+  });
+
   app.get("/fetchBusinessOnSales", async function(req, res, next) {
     const { skip, limit, state } = req.query;
 
@@ -175,7 +229,8 @@ module.exports = app => {
         limit,
         offset: skip,
         where,
-        order: [["created_at", "DESC"]]
+        order: [["created_at", "DESC"]],
+        include: [{ model: Cities, required: true }]
       };
 
       const countQuery = Object.assign({}, query);
@@ -311,12 +366,23 @@ module.exports = app => {
   app.patch("/incrementJobView", async function(req, res) {
     const { id } = req.body;
 
-    console.log("find job with id " + id);
     const job = await MessengerJobs.findById(id);
 
     const views = (job.views || 0) + 1;
 
     await job.update({ views });
+
+    res.json({ success: true, views });
+  });
+
+  app.patch("/incrementBusinessView", async function(req, res) {
+    const { id } = req.body;
+
+    const business = await BusinessOnSales.findById(id);
+
+    const views = (business.views || 0) + 1;
+
+    await business.update({ views });
 
     res.json({ success: true, views });
   });

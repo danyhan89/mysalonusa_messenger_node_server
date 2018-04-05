@@ -44,6 +44,7 @@ const Chats = sequelize.define(
     nickname: Sequelize.STRING,
     alias: Sequelize.STRING,
     email: Sequelize.STRING,
+    created_at: Sequelize.DATE,
     chat_type: {
       type: Sequelize.ENUM,
       values: ["chat", "job"]
@@ -154,6 +155,8 @@ const BusinessOnSales = sequelize.define(
     underscored: true
   }
 );
+
+BusinessOnSales.belongsTo(Cities, { foreignKey: "city_id" });
 
 const findStateByAbbreviation = async abbr => {
   if (typeof abbr != "string") {
