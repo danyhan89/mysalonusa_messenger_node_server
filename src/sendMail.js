@@ -13,7 +13,7 @@ module.exports = ({ to, from, subject, html }) => {
 
   const result = sgMail.send(msg);
   result.then(response => {
-    debugger
+    
     console.log('!!!!')
     console.log(response)
   }).catch(err => {
