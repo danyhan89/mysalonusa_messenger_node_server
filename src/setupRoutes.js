@@ -4,6 +4,7 @@ var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 const Sequelize = require("sequelize");
 const multer = require("multer");
+const sendMail = require("./sendMail");
 const upload = multer({
   limits: { fieldSize: 25 * 1024 * 1024 }
 });
@@ -388,14 +389,19 @@ module.exports = app => {
   });
 
   app.post("/applyForJob", async function(req, res, next) {
-    const {
-      community,
-      email,
-      description,
-      state,
-      nickname,
-      uniqueNickname
-    } = req.body;
+    const { email, message, job } = req.body;
+
+    const foundJob = await MessengerJobs.findById(job.id);
+    console.log("Sending email to " + foundJob.email);
+    sendMail({
+      to: foundJob.email,
+      subject: "Someone has applied to your MySalonUSA job",
+      html: `You have a new application for the job "${
+        foundJob.description
+      }" on MySalonUSA. Find the details below:<br /><br />
+<b>Email:</b> ${email}<br />
+<b>Message:</b> ${message}.`
+    });
 
     res.json({
       success: true

@@ -1,3 +1,4 @@
+require("dotenv").config();
 const app = require("express")();
 const http = require("http").Server(app);
 const bodyParser = require("body-parser");
@@ -15,8 +16,6 @@ const {
   editChatMessage,
   findState
 } = require("./models");
-
-require("dotenv").config();
 
 const cors = require("cors");
 

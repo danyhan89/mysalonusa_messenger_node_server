@@ -1,5 +1,7 @@
-const sendMail = require('./sendMail')
+const sendMail = require("./sendMail");
 
 sendMail({
-  html: 'test <b>mail</b>'
-})
+  subject: "testmail",
+  to: "danyhan89@gmail.com",
+  html: "test <b>mail</b>"
+});

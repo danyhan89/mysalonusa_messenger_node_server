@@ -1,26 +1,33 @@
 const sgMail = require("@sendgrid/mail");
-sgMail.setApiKey(
-  process.env.SENDGRID_API_KEY ||
-    "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"
-);
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-module.exports = ({ to, from, subject, html }) => {
+module.exports = ({ to, from, subject, html, body }) => {
+  if (!subject) {
+    throw new Error("No email subject specified!");
+  }
+  if (!html && !body) {
+    throw new Error("No html or body for the email message");
+  }
   const msg = {
     to: to || "danyhan89@gmail.com",
-    from: from || "successnailsalon2017@gmail.com",
-    subject: subject || "Sending with SendGrid is Fun",
+    from:
+      from ||
+      process.env.FROM_EMAIL_ADDRESS ||
+      "successnailsalon2017@gmail.com",
+    subject: subject,
 
-    html: html || "<strong>and easy to do anywhere, even with Node.js</strong>"
+    html: html || body
   };
+
+  console.log(msg, "!!!");
 
   const result = sgMail.send(msg);
   result
     .then(response => {
-      console.log("!!!!");
-      console.log(response);
+      console.log("Email successfully sent to " + to);
     })
     .catch(err => {
+      console.log("There was an error sending an email to " + to);
       console.log(err);
     });
-  console.log(result);
 };
