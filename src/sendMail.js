@@ -19,8 +19,6 @@ module.exports = ({ to, from, subject, html, body }) => {
     html: html || body
   };
 
-  console.log(msg, "!!!");
-
   const result = sgMail.send(msg);
   result
     .then(response => {
