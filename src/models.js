@@ -76,11 +76,12 @@ Chats.hasOne(Communities, {
 const MessengerJobs = sequelize.define(
   "messenger_jobs",
   {
+    id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true },
     description: Sequelize.STRING,
     nickname: Sequelize.STRING,
     alias: Sequelize.STRING,
     email: Sequelize.STRING,
-    created_at: Sequelize.DATE,
+    created_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
     views: Sequelize.INTEGER,
     state_id: {
       type: Sequelize.INTEGER,
@@ -128,6 +129,22 @@ const Cities = sequelize.define(
     }
   },
   { underscored: true }
+);
+
+const Users = sequelize.define(
+  "users",
+  {
+    uid: { type: Sequelize.STRING, primaryKey: true },
+    email: Sequelize.STRING,
+    admin: Sequelize.BOOLEAN,
+    provider: { type: Sequelize.STRING, defaultValue: "google" },
+    //created_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+    //updated_at: { type: Sequelize.DATE, defaultValue: Sequelize.NOW },
+    name: Sequelize.STRING
+  },
+  {
+    underscored: true
+  }
 );
 
 const BusinessOnSales = sequelize.define(
@@ -355,5 +372,6 @@ module.exports = {
   publishChatMessage,
   editChatMessage,
   deleteChatMessage,
-  sequelize
+  sequelize,
+  Users
 };

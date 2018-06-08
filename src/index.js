@@ -1,5 +1,6 @@
 require("dotenv").config();
-const app = require("express")();
+const express = require("express");
+const app = express();
 const http = require("http").Server(app);
 const bodyParser = require("body-parser");
 const io = require("socket.io")(http);
@@ -14,17 +15,72 @@ const {
   publishChatMessage,
   deleteChatMessage,
   editChatMessage,
-  findState
+  findState,
+  Users
 } = require("./models");
 
 const cors = require("cors");
+const passport = require("passport");
 
 app.use(
   cors({
+    origin: ["http://localhost:8080", "https://broker-wrist-73327.netlify.com"],
+    credentials: true, //"Access-Control-Allow-Origin": "http://localhost:8080",
     exposedHeaders: ["Content-Type", "X-Total-Count"]
   })
 );
 
+const session = require("express-session");
+
+const cache = {};
+passport.serializeUser(function(user, done) {
+  //cache[user.id] = user;
+  done(null, user.id || user.uid);
+});
+
+passport.deserializeUser(function(id, done) {
+  //done(null, cache[id] || id);
+  //return;
+  Users.findOne({ where: { uid: `${id}` } })
+    .then(user => {
+      done(null, user);
+    })
+    .catch(err => {
+      done(err);
+    });
+});
+const GoogleStrategy = require("passport-google-oauth").OAuth2Strategy;
+
+// Use the GoogleStrategy within Passport.
+//   Strategies in Passport require a `verify` function, which accept
+//   credentials (in this case, an accessToken, refreshToken, and Google
+//   profile), and invoke a callback with a user object.
+passport.use(
+  new GoogleStrategy(
+    {
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "http://localhost:3000/auth/google/callback"
+    },
+    function(accessToken, refreshToken, profile, done) {
+      const profileEmail = profile.emails[0].value;
+
+      Users.findOrCreate({
+        where: { uid: profile.id, email: profileEmail }
+      })
+        .spread(user => {
+          return done(null, user.get({ plain: true }));
+        })
+        .catch(err => done(err));
+
+      //done(null, profile);
+    }
+  )
+);
+
+app.use(session({ secret: "keyboard cat" }));
+app.use(passport.initialize());
+app.use(passport.session());
 setupRoutes(app);
 
 const socketsPerState = require("./socketsPerState");

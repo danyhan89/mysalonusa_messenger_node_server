@@ -4,12 +4,28 @@ var cookieParser = require("cookie-parser");
 var bodyParser = require("body-parser");
 const Sequelize = require("sequelize");
 const multer = require("multer");
+const passport = require("passport");
 const sendMail = require("./sendMail");
 const upload = multer({
   limits: { fieldSize: 25 * 1024 * 1024 }
 });
 
 const uploadFile = require("./uploadFile");
+
+const ensureAuth = (req, res, next) => {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect("/admin/login");
+};
+
+const ensureAdmin = (req, res, next) => {
+  console.log("user:", req.user, "!!!??");
+  if (req.isAuthenticated() && req.user && req.user.admin) {
+    return next();
+  }
+  res.redirect("/admin/login");
+};
 
 const {
   sequelize,
@@ -110,8 +126,32 @@ module.exports = app => {
     res.json(cities);
   });
 
+  app.delete("/jobs/:id", ensureAdmin, async function(req, res) {
+    const { id } = req.params;
+    await MessengerJobs.destroy({ where: { id } });
+    res.json({
+      success: true
+    });
+  });
+  app.get("/test-admin", ensureAdmin, async function(req, res) {
+    res.json({
+      ok: true
+    });
+  });
+  app.get("/test-login", ensureAuth, async function(req, res) {
+    res.json({
+      ok: true
+    });
+  });
+
+  app.get("/test", async function(req, res) {
+    res.json({
+      ok: true
+    });
+  });
+
   app.get("/fetchJobs", async function(req, res, next) {
-    const { skip, limit, state, community } = req.query;
+    const { skip, limit, state, community, filter } = req.query;
 
     try {
       const foundState = await findState(state);
@@ -131,6 +171,13 @@ module.exports = app => {
       if (foundCommunity) {
         where.community_id = foundCommunity.id;
       }
+      const filterIds = filter ? filter.split(",") : null;
+
+      if (filterIds) {
+        where.id = {
+          [Sequelize.Op.or]: filterIds
+        };
+      }
 
       const query = {
         limit,
@@ -138,6 +185,7 @@ module.exports = app => {
         where,
         order: [["created_at", "DESC"]]
       };
+
       const countQuery = Object.assign({}, query);
       delete countQuery.limit;
       delete countQuery.offset;
@@ -208,7 +256,7 @@ module.exports = app => {
   });
 
   app.get("/fetchBusinessOnSales", async function(req, res, next) {
-    const { skip, limit, state } = req.query;
+    const { skip, limit, state, filter } = req.query;
 
     try {
       const foundState = await findState(state);
@@ -225,6 +273,14 @@ module.exports = app => {
           in: cityIdsInState
         }
       };
+
+      const filterIds = filter ? filter.split(",") : null;
+
+      if (filterIds) {
+        where.id = {
+          [Sequelize.Op.or]: filterIds
+        };
+      }
 
       const query = {
         limit,
@@ -406,5 +462,84 @@ module.exports = app => {
     res.json({
       success: true
     });
+  });
+
+  // authentication
+
+  // GET /auth/google
+  //   Use passport.authenticate() as route middleware to authenticate the
+  //   request.  The first step in Google authentication will involve
+  //   redirecting the user to google.com.  After authorization, Google
+  //   will redirect the user back to this application at /auth/google/callback
+  app.get(
+    "/auth/google",
+    passport.authenticate("google", {
+      scope: [
+        "https://www.googleapis.com/auth/plus.login",
+        "https://www.googleapis.com/auth/userinfo.email"
+      ]
+    })
+  );
+  /*
+  create_table "users", force: :cascade do |t|
+    t.string   "provider",                              null: false
+    t.string   "uid",                                   null: false
+    t.string   "name"
+    t.string   "email"
+    t.string   "location"
+    t.string   "image_url"
+    t.string   "prof_url"
+    t.datetime "created_at",                            null: false
+    t.datetime "updated_at",                            null: false
+    t.boolean  "private_tokens_access", default: false
+    t.integer  "private_tokens_left",   default: 0
+    t.integer  "status",                default: 1
+    t.boolean  "admin",                 default: false
+  end
+*/
+  // GET /auth/google/callback
+  //   Use passport.authenticate() as route middleware to authenticate the
+  //   request.  If authentication fails, the user will be redirected back to the
+  //   login page.  Otherwise, the primary route function function will be called,
+  //   which, in this example, will redirect the user to the home page.
+  app.get(
+    "/auth/google/callback",
+    passport.authenticate("google", { failureRedirect: "/admin/login" }),
+    function(req, res) {
+      /*Users.findBy({
+        email: req.u
+      });*/
+      res.redirect("/admin");
+    }
+  );
+
+  const querystring = require("querystring");
+
+  const getUserInfo = user => {
+    return user
+      ? {
+          email: user.email,
+          admin: user.admin
+        } /*{
+          id: user.id,
+          displayName: user.displayName,
+          name: user.name,
+          photos: user.photos,
+          email: user.emails && user.emails.length ? user.emails[0].value : null
+      }*/
+      : null;
+  };
+
+  app.get("/admin", ensureAuth, (req, res) => {
+    const user = getUserInfo(req.user);
+    res.redirect(
+      process.env.FRONTEND_URL +
+        "/admin/auth?user=" +
+        querystring.escape(JSON.stringify(user))
+    );
+  });
+
+  app.get("/admin/login", (req, res) => {
+    res.redirect(process.env.FRONTEND_URL + "/admin/auth?user=");
   });
 };
