@@ -133,6 +133,29 @@ module.exports = app => {
       success: true
     });
   });
+  app.post("/jobs/:id", ensureAdmin, async function(req, res) {
+    const { id } = req.params;
+    const body = req.body;
+
+    const job = await MessengerJobs.findById(id);
+    const foundState = await findState(body.state);
+    const foundCommunity = await Communities.findOne({
+      where: { name: body.community.toLowerCase() }
+    });
+
+    console.log(body);
+
+    await job.update({
+      state_id: foundState.id,
+      community_id: foundCommunity.id,
+      nickname: body.nickname,
+      email: body.email,
+      description: body.description
+    });
+    res.json({
+      success: true
+    });
+  });
   app.get("/test-admin", ensureAdmin, async function(req, res) {
     res.json({
       ok: true
