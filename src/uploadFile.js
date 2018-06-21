@@ -8,10 +8,13 @@ module.exports = (base64data, { key, contentType }) => {
 
   return new Promise((resolve, reject) => {
     var s3 = new AWS.S3();
-    const buffer = new Buffer(
-      base64data.replace(/^data:image\/\w+;base64,/, ""),
-      "base64"
-    );
+    const buffer =
+      base64data instanceof Buffer
+        ? base64data
+        : new Buffer(
+            base64data.replace(/^data:image\/\w+;base64,/, ""),
+            "base64"
+          );
     s3.putObject(
       {
         ContentType: contentType,

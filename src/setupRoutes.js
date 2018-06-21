@@ -6,11 +6,19 @@ const Sequelize = require("sequelize");
 const multer = require("multer");
 const passport = require("passport");
 const sendMail = require("./sendMail");
+const { deleteKeys, getObject, listContents } = require("./s3Utils");
 const upload = multer({
   limits: { fieldSize: 25 * 1024 * 1024 }
 });
 
 const uploadFile = require("./uploadFile");
+
+const encode = data => {
+  const str = data.reduce(function(a, b) {
+    return a + String.fromCharCode(b);
+  }, "");
+  return btoa(str).replace(/.{76}(?=.)/g, "$&\n");
+};
 
 const ensureAuth = (req, res, next) => {
   if (req.isAuthenticated()) {
@@ -150,6 +158,7 @@ module.exports = app => {
       community_id: foundCommunity.id,
       nickname: body.nickname,
       email: body.email,
+      views: body.views,
       description: body.description
     });
     res.json({
@@ -386,6 +395,137 @@ module.exports = app => {
 
       Promise.all(promises).then(urls => {
         createdBusiness.update({
+          image_urls: urls
+        });
+      });
+    } catch (err) {
+      console.error(err);
+    }
+  });
+
+  app.post("/editBusiness", ensureAuth, upload.array(), async function(
+    req,
+    res,
+    next
+  ) {
+    const {
+      id,
+      community,
+      email,
+      description,
+      title,
+      views,
+      price,
+      images,
+      fileNames,
+
+      contentTypes,
+      state,
+      city: city_id,
+      uniqueNickname
+    } = req.body;
+
+    let { image_urls } = req.body;
+    try {
+      image_urls = image_urls.filter(u => u);
+
+      const keepImagesMap = image_urls.reduce((acc, url) => {
+        url = url.substring(url.indexOf("uploads/business_on_sale"));
+        acc[url] = true;
+        return acc;
+      }, {});
+
+      const key = ["uploads", "business_on_sale", "images", id].join("/");
+
+      const contents = await listContents(key);
+
+      let keepImages = await Promise.all(
+        contents.map(async ({ Key }) => {
+          return getObject({ Key })
+            .then(response => {
+              const { Body, ContentType } = response;
+              const parts = Key.split("/");
+
+              return {
+                Body,
+                Key,
+                ContentType
+              };
+            })
+            .catch(ex => {
+              return {};
+            });
+        })
+      );
+
+      keepImages = keepImages.filter(item => {
+        const { Key } = item;
+        return Key && keepImagesMap[Key];
+      });
+
+      const keys = contents.map(({ Key }) => {
+        return Key;
+      });
+
+      await deleteKeys(keys);
+
+      const business = await BusinessOnSales.findById(id);
+      await business.update({
+        description,
+        title,
+        views,
+        nickname: uniqueNickname,
+        contact_email: email,
+        price_string: price,
+        city_id
+      });
+
+      res.json({ success: true, business });
+
+      let imageIndex = 0;
+
+      // upload prev images first
+      const keepImagesPromises = keepImages.map(image => {
+        const { Key, ContentType, Body } = image;
+
+        const parts = Key.split(".");
+        const extension = parts[parts.length - 1];
+        imageIndex++;
+        return uploadFile(Body, {
+          contentType: ContentType,
+          key: [
+            "uploads",
+            "business_on_sale",
+            "images",
+            business.id,
+            imageIndex + "." + extension
+          ].join("/")
+        });
+      });
+
+      // and then the newly uploaded images
+      const promises = (images || []).map((image, index) => {
+        const fileName = fileNames[index];
+        const parts = fileName.split(".");
+        const extension = parts[parts.length - 1];
+
+        imageIndex++;
+        return uploadFile(image, {
+          contentType: contentTypes[index],
+          key: [
+            "uploads",
+            "business_on_sale",
+            "images",
+            business.id,
+            imageIndex + "." + extension
+          ].join("/")
+        });
+      });
+
+      Promise.all(keepImagesPromises.concat(promises)).then(urls => {
+        urls = urls || [];
+
+        business.update({
           image_urls: urls
         });
       });
