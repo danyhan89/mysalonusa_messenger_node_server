@@ -31,7 +31,8 @@ module.exports = (base64data, { key, contentType }) => {
         reject(err);
       } else {
         const fullUrl =
-          `https://s3.amazonaws.com/${process.env.AWS_BUCKET}/` + key;
+          (process.env.AWS_BUCKET_PUBLIC_URL ||
+            `https://s3.amazonaws.com/${process.env.AWS_BUCKET}/`) + key;
         log("Done uploading image to url:", fullUrl);
         resolve(fullUrl);
       }
