@@ -408,6 +408,7 @@ module.exports = app => {
     res,
     next
   ) {
+    const log = require("debug")("editBusiness");
     const {
       id,
       community,
@@ -429,11 +430,13 @@ module.exports = app => {
     try {
       image_urls = image_urls.filter(u => u);
 
+      log("image_urls", image_urls);
       const keepImagesMap = image_urls.reduce((acc, url) => {
         url = url.substring(url.indexOf("uploads/business_on_sale"));
         acc[url] = true;
         return acc;
       }, {});
+      log("keepImagesMap", keepImagesMap);
 
       const key = ["uploads", "business_on_sale", "images", id].join("/");
 
@@ -458,6 +461,7 @@ module.exports = app => {
         })
       );
 
+      log("Current s3 images: ", keepImages);
       keepImages = keepImages.filter(item => {
         const { Key } = item;
         return Key && keepImagesMap[Key];
@@ -466,6 +470,11 @@ module.exports = app => {
       const keys = contents.map(({ Key }) => {
         return Key;
       });
+
+      log(
+        `Deleting keys: ${keys}, but keeping images: `,
+        Object.keys(keepImages)
+      );
 
       await deleteKeys(keys);
 
@@ -480,6 +489,7 @@ module.exports = app => {
         city_id
       });
 
+      log("Update business success.");
       res.json({ success: true, business });
 
       let imageIndex = 0;
@@ -491,15 +501,17 @@ module.exports = app => {
         const parts = Key.split(".");
         const extension = parts[parts.length - 1];
         imageIndex++;
+        const key = [
+          "uploads",
+          "business_on_sale",
+          "images",
+          business.id,
+          imageIndex + "." + extension
+        ].join("/");
+        log("Uploading old image - ", key);
         return uploadFile(Body, {
           contentType: ContentType,
-          key: [
-            "uploads",
-            "business_on_sale",
-            "images",
-            business.id,
-            imageIndex + "." + extension
-          ].join("/")
+          key
         });
       });
 
@@ -510,19 +522,22 @@ module.exports = app => {
         const extension = parts[parts.length - 1];
 
         imageIndex++;
+        const key = [
+          "uploads",
+          "business_on_sale",
+          "images",
+          business.id,
+          imageIndex + "." + extension
+        ].join("/");
+        log("Uploading new image  - ", key);
         return uploadFile(image, {
           contentType: contentTypes[index],
-          key: [
-            "uploads",
-            "business_on_sale",
-            "images",
-            business.id,
-            imageIndex + "." + extension
-          ].join("/")
+          key
         });
       });
 
       Promise.all(keepImagesPromises.concat(promises)).then(urls => {
+        log("Done uploading images");
         urls = urls || [];
 
         business.update({

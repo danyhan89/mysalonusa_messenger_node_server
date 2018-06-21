@@ -1,5 +1,6 @@
 const AWS = require("aws-sdk");
 const fs = require("fs");
+const log = require("debug")("s3-upload");
 
 module.exports = (base64data, { key, contentType }) => {
   if (!key) {
@@ -15,23 +16,25 @@ module.exports = (base64data, { key, contentType }) => {
             base64data.replace(/^data:image\/\w+;base64,/, ""),
             "base64"
           );
-    s3.putObject(
-      {
-        ContentType: contentType,
-        Bucket: process.env.AWS_BUCKET,
-        Key: key,
-        Body: buffer,
-        ACL: "public-read"
-      },
-      function(err, data) {
-        if (err) {
-          reject(err);
-        } else {
-          const fullUrl =
-            `https://s3.amazonaws.com/${process.env.AWS_BUCKET}/` + key;
-          resolve(fullUrl);
-        }
+    const bucketConfig = {
+      ContentType: contentType,
+      Bucket: process.env.AWS_BUCKET,
+      Key: key,
+      Body: buffer,
+      ACL: "public-read"
+    };
+
+    log("Uploading image to S3", bucketConfig);
+    s3.putObject(bucketConfig, function(err, data) {
+      if (err) {
+        log("S3 upload  error", err);
+        reject(err);
+      } else {
+        const fullUrl =
+          `https://s3.amazonaws.com/${process.env.AWS_BUCKET}/` + key;
+        log("Done uploading image to url:", fullUrl);
+        resolve(fullUrl);
       }
-    );
+    });
   });
 };
