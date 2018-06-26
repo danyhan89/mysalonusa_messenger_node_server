@@ -34,8 +34,8 @@ const session = require("express-session");
 
 const cache = {};
 passport.serializeUser(function(user, done) {
-  //cache[user.id] = user;
-  done(null, user.id || user.uid);
+  // cache[user.uid] = user;
+  done(null, user.uid);
 });
 
 passport.deserializeUser(function(id, done) {
@@ -77,8 +77,17 @@ passport.use(
     }
   )
 );
+const thirty_days = 1000 * 60 * 60 * 24 * 30;
 
-app.use(session({ secret: "keyboard cat" }));
+app.use(
+  session({
+    secret: "keyboard cat",
+    cookie: {
+      httpOnly: true,
+      maxAge: thirty_days
+    }
+  })
+);
 app.use(passport.initialize());
 app.use(passport.session());
 setupRoutes(app);
