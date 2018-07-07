@@ -24,7 +24,12 @@ const passport = require("passport");
 
 app.use(
   cors({
-    origin: ["http://localhost:8080", "https://broker-wrist-73327.netlify.com"],
+    origin: [
+      "http://localhost:8080",
+      "https://broker-wrist-73327.netlify.com",
+      "http://jobtalk.me",
+      "https://jobtalk.me"
+    ],
     credentials: true, //"Access-Control-Allow-Origin": "http://localhost:8080",
     exposedHeaders: ["Content-Type", "X-Total-Count"]
   })
