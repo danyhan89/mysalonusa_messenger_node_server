@@ -28,7 +28,9 @@ app.use(
       "http://localhost:8080",
       "https://broker-wrist-73327.netlify.com",
       "http://jobtalk.me",
-      "https://jobtalk.me"
+      "http://www.jobtalk.me",
+      "https://jobtalk.me",
+      "https://www.jobtalk.me"
     ],
     credentials: true, //"Access-Control-Allow-Origin": "http://localhost:8080",
     exposedHeaders: ["Content-Type", "X-Total-Count"]
