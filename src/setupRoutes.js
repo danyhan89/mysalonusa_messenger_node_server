@@ -74,6 +74,7 @@ module.exports = app => {
       }
 
       const where = {
+        parent_id: null,
         state_id: foundState.id,
         community_id: foundCommunity.id
       };
@@ -90,6 +91,80 @@ module.exports = app => {
         order: [["id", "DESC"]]
       });
 
+      let replies = await Chats.findAll({
+        order: [["id", "DESC"]],
+        where: {
+          ancestor_id: {
+            [Sequelize.Op.or]: chats.map(c => c.id)
+          }
+        }
+      });
+
+      replies = replies.reduce((acc, chat) => {
+        if (!acc[chat.parent_id]) {
+          acc[chat.parent_id] = [];
+        }
+        acc[chat.parent_id].push(chat.toJSON());
+        return acc;
+      }, {});
+
+      //below is replies which is summary map of chats and replies used on every chat render from front side
+      //*this works because we will generate two dataset for front end -
+      //1) all ancestor main chats 2) map of parent_ids and children as values
+      //*all the ancestor chats (main chats) being looped over in frontend are also parent_ids to the persepctive of IMMEDIATE childrens/replies.
+      //*therefore for every ancestor (main) chat we loop, we can look into map of parent_ids and find the key pointing to self and all the immediate children, and loop over the children chats.
+      //*these children chats are all immediate children of main chats, and have parent_id and ancestor_id pointing to the main chat
+      //*When frontend chat components are rendering - For all the immediate children of the ancestor/main chats we loop over,
+      //we will also recursively look into map of parent ids to see if they are also parents to other children of chats.
+      //immediate children of main chats can be parent to other replies. Just like how below id 401 & 701 are listed as parent_ids themselves with its reply chats children
+      // {
+      //   400: [{ id: 401}], (main)
+      //   700: [{ id: 701}]  (main)
+      //   401: [{id :402}], (immediate child and its children)
+      //   701: [{id: 702}], (immediate child and its children)
+      // }
+
+      //below are examples of hierarchy chats
+      //main chats
+      // {
+      //   id: 400,
+      //   messsage: "hi",
+      //   ancestor_id: null,
+      //   parent_id: null
+      // }
+      // {
+      //   id: 700,
+      //   messsage: "main chat",
+      //   ancestor_id: null,
+      //   parent_id: null
+      // }
+      //immediate childrens (looped in replies)
+      // {
+      //   id: 401,
+      //   messsage: "this is reply to 400",
+      //   ancestor_id: 400,
+      //   parent_id: 400
+      // }
+      //children's children (looped in replies)
+      // {
+      //   id: 402,
+      //   messsage: "this is reply to 401",
+      //   ancestor_id: 400,
+      //   parent_id: 401
+      // }
+      // {
+      //   id: 701, (looped in replies)
+      //   messsage: "this is reply to 700",
+      //   ancestor_id: 700,
+      //   parent_id: 700
+      // }
+      // {
+      //   id: 702, (looped in replies)
+      //   messsage: "this is reply to 701",
+      //   ancestor_id: 700,
+      //   parent_id: 701
+      // }
+
       const promisedChats = chats.map(chat => {
         return new Promise(resolve => {
           chat = chat.toJSON();
@@ -101,14 +176,28 @@ module.exports = app => {
               chat.message = JSON.stringify(job);
               resolve(chat);
             });
-          } else {
-            resolve(chat);
+            return;
           }
+          /*
+          if (chat.chat_type == 2) {
+            // business_on_sale
+            let business = JSON.parse(chat.message);
+            BusinessOnSales.findById(business.id).then(business => {
+              chat.message = JSON.stringify(business);
+              resolve(chat);
+            });
+            return;
+          }*/
+
+          resolve(chat);
         });
       });
 
       Promise.all(promisedChats).then(chats => {
-        res.json(chats);
+        res.json({
+          chats,
+          replies
+        });
       });
 
       //res.json(chats);
@@ -353,6 +442,20 @@ module.exports = app => {
     } = req.body;
 
     try {
+      const foundState = await findState(state);
+      const foundCommunity = await Communities.findOne({
+        where: { name: community.toLowerCase() }
+      });
+      if (!foundState || !foundCommunity) {
+        res.json({
+          success: false,
+          message: !foundState
+            ? `No state "${state}" found!`
+            : `No community "${community}" found!`
+        });
+        return;
+      }
+
       const createdBusiness = await BusinessOnSales.create({
         description,
         title,
@@ -373,6 +476,16 @@ module.exports = app => {
         state: foundState.id,
         community: foundCommunity.name
       });*/
+
+      publishChatMessage({
+        type: "business_on_sale",
+        nickname: uniqueNickname,
+        message: JSON.stringify(createdBusiness),
+        email,
+        description,
+        state: foundState.id,
+        community: foundCommunity.name
+      });
 
       res.json({ success: true, business: createdBusiness });
 

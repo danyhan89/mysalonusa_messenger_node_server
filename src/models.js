@@ -47,7 +47,7 @@ const Chats = sequelize.define(
     created_at: Sequelize.DATE,
     chat_type: {
       type: Sequelize.ENUM,
-      values: ["chat", "job"]
+      values: ["chat", "job", "business_on_sale"]
     },
     state_id: {
       type: Sequelize.INTEGER,
@@ -60,6 +60,20 @@ const Chats = sequelize.define(
       type: Sequelize.INTEGER,
       references: {
         model: Communities,
+        key: "id"
+      }
+    },
+    parent_id: {
+      type: Sequelize.INTEGER,
+      references: {
+        model: "chats",
+        key: "id"
+      }
+    },
+    ancestor_id: {
+      type: Sequelize.INTEGER,
+      references: {
+        model: "chats",
         key: "id"
       }
     }
@@ -226,6 +240,7 @@ const publishChatMessage = async chatMessage => {
     alias,
     state: stateId,
     community,
+    parent_id,
     type
   } = chatMessage;
 
@@ -237,7 +252,8 @@ const publishChatMessage = async chatMessage => {
         alias,
         type,
         state: stateId,
-        community
+        community,
+        parent_id
       },
       {
         includeCommunity: false
@@ -326,7 +342,15 @@ const deleteChatMessage = async id => {
 };
 
 const createChatMessage = async (chatMessage, { includeCommunity } = {}) => {
-  const { message, nickname, alias, community, state, type } = chatMessage;
+  const {
+    message,
+    nickname,
+    alias,
+    community,
+    state,
+    type,
+    parent_id
+  } = chatMessage;
 
   try {
     const foundCommunity = await Communities.findOne({
@@ -335,15 +359,22 @@ const createChatMessage = async (chatMessage, { includeCommunity } = {}) => {
       }
     });
     const foundState = await findState(state);
+    const foundParentChat = parent_id ? await Chats.findById(parent_id) : null;
+    const foundParentId = foundParentChat ? foundParentChat.id : null;
+    const ancestor_id = foundParentChat
+      ? foundParentChat.ancestor_id || foundParentId
+      : null;
 
     const createdMessage = await Chats.create(
       {
         message,
         nickname,
         alias,
-        chat_type: type == "job" ? 1 : 0, //type || "chat",
+        chat_type: type == "chat" ? 0 : type == "job" ? 1 : 2, //type "chat", "job" or "business_on_sale",
         community_id: foundCommunity.id,
-        state_id: foundState.id
+        state_id: foundState.id,
+        parent_id,
+        ancestor_id
       },
       {
         include: Communities
