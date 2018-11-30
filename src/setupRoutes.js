@@ -69,7 +69,7 @@ module.exports = app => {
       });
 
       if (!foundState || !foundCommunity) {
-        res.json([]);
+        res.json({ chats: [], replies: [] });
         return;
       }
 
