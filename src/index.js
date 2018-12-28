@@ -32,7 +32,7 @@ app.use(
       "https://jobtalk.me",
       "https://www.jobtalk.me"
     ],
-    credentials: true, //"Access-Control-Allow-Origin": "http://localhost:8080",
+    credentials: "Access-Control-Allow-Origin", //true, "Access-Control-Allow-Origin": "http://localhost:8080",
     exposedHeaders: ["Content-Type", "X-Total-Count"]
   })
 );
